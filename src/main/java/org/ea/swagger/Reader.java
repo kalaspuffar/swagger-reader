@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class Reader {
     public static void main(String[] args) {
-        Swagger swagger = new SwaggerParser().read("swagger.json");
+        Swagger swagger = new SwaggerParser().read("petshop.json");
 
         System.out.println(swagger.getInfo().getDescription());
 
@@ -41,10 +41,17 @@ public class Reader {
         for(Map.Entry<String, Response> response : responseMap.entrySet()) {
             System.out.println(response.getKey() + ": " + response.getValue().getDescription());
 
+
+            if(response.getValue().getSchema() instanceof RefProperty) {
+                RefProperty rp = (RefProperty)response.getValue().getSchema();
+                printReference(swagger, rp);
+            }
+
             if(response.getValue().getSchema() instanceof ArrayProperty) {
                 ArrayProperty ap = (ArrayProperty)response.getValue().getSchema();
                 if(ap.getItems() instanceof RefProperty) {
                     RefProperty rp = (RefProperty)ap.getItems();
+                    System.out.println(rp.getSimpleRef() + "[]");
                     printReference(swagger, rp);
                 }
             }
@@ -55,8 +62,20 @@ public class Reader {
         if(rp.getRefFormat().equals(RefFormat.INTERNAL) &&
                 swagger.getDefinitions().containsKey(rp.getSimpleRef())) {
             Model m = swagger.getDefinitions().get(rp.getSimpleRef());
-            for(Map.Entry<String, Property> propertyEntry : m.getProperties().entrySet()) {
-                System.out.println("  " + propertyEntry.getKey() + " : " + propertyEntry.getValue().getType());
+
+            if(m instanceof ArrayModel) {
+                ArrayModel arrayModel = (ArrayModel)m;
+                System.out.println(rp.getSimpleRef() + "[]");
+                if(arrayModel.getItems() instanceof RefProperty) {
+                    RefProperty arrayModelRefProp = (RefProperty)arrayModel.getItems();
+                    printReference(swagger, arrayModelRefProp);
+                }
+            }
+
+            if(m.getProperties() != null) {
+                for (Map.Entry<String, Property> propertyEntry : m.getProperties().entrySet()) {
+                    System.out.println("  " + propertyEntry.getKey() + " : " + propertyEntry.getValue().getType());
+                }
             }
         }
     }
